@@ -9,6 +9,7 @@ resource "google_monitoring_notification_channel" "email" {
 
 resource "google_monitoring_alert_policy" "cpu" {
   display_name = "BindPlane High CPU"
+  combiner     = "OR"
 
   conditions {
     display_name = "CPU Utilization > 80%"
@@ -18,6 +19,10 @@ resource "google_monitoring_alert_policy" "cpu" {
       comparison      = "COMPARISON_GT"
       threshold_value = 0.8
       duration        = "300s"
+
+      trigger {
+        count = 1
+      }
     }
   }
 
