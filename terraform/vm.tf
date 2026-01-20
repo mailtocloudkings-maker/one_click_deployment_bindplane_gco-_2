@@ -98,10 +98,14 @@ store:
     user: bindplane_user
     password: StrongPassword@2025
     sslmode: disable
+  bbolt:
+    # bbolt is deprecated and will be removed in a future release.
+    path: /var/lib/bindplane/storage/bindplane.db
 EOF
 
 chown -R bindplane:bindplane /etc/bindplane
 chmod 600 /etc/bindplane/config.yaml
+
 
 # -------------------------------
 # Start BindPlane
