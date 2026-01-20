@@ -1,3 +1,9 @@
+# Generate SSH key pair
+resource "tls_private_key" "bindplane_ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
 # BindPlane VM
 resource "google_compute_instance" "bindplane_control" {
   name         = "bindplane-control-${random_id.suffix.hex}"
@@ -12,13 +18,12 @@ resource "google_compute_instance" "bindplane_control" {
     }
   }
 
-  # DEFAULT VPC + DEFAULT SUBNET
   network_interface {
     network = "default"
     access_config {}
   }
 
-  # Inject SSH public key for ubuntu user
+  # Inject SSH public key
   metadata = {
     ssh-keys = "ubuntu:${tls_private_key.bindplane_ssh.public_key_openssh}"
   }
