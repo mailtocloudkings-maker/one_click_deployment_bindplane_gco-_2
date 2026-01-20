@@ -1,3 +1,4 @@
+# Random ID for uniqueness
 resource "random_id" "suffix" {
   byte_length = 4
 }
