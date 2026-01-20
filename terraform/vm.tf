@@ -7,7 +7,7 @@ resource "tls_private_key" "bindplane_ssh" {
 # BindPlane VM
 resource "google_compute_instance" "bindplane_control" {
   name         = "bindplane-control-${random_id.suffix.hex}"
-  machine_type = "e2-standard-4"
+  machine_type = "e2-medium"        # smaller machine type to avoid quota issues
   zone         = var.zone
   tags         = ["bindplane"]
 
@@ -18,6 +18,7 @@ resource "google_compute_instance" "bindplane_control" {
     }
   }
 
+  # DEFAULT VPC + DEFAULT SUBNET
   network_interface {
     network = "default"
     access_config {}
