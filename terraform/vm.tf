@@ -1,3 +1,15 @@
+# Generate a random suffix for unique names
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+# Generate SSH key pair for agent installation
+resource "tls_private_key" "bindplane_ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# BindPlane VM
 resource "google_compute_instance" "bindplane_control" {
   name         = "bindplane-control-${random_id.suffix.hex}"
   machine_type = "e2-standard-4"
@@ -15,6 +27,11 @@ resource "google_compute_instance" "bindplane_control" {
   network_interface {
     network = "default"
     access_config {}
+  }
+
+  # Inject SSH public key for ubuntu user
+  metadata = {
+    ssh-keys = "ubuntu:${tls_private_key.bindplane_ssh.public_key_openssh}"
   }
 
   metadata_startup_script = <<-SCRIPT
