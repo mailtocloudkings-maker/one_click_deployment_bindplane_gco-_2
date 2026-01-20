@@ -17,9 +17,5 @@ variable "alert_email" {
   description = "Email for alert notifications"
   type        = string
 }
-variable "bindplane_api_key" {
-  description = "API key for BindPlane (auto-generated)"
-  type        = string
-  sensitive   = true
-}
+
 
