@@ -81,6 +81,7 @@ bash install-linux.sh --init
 rm -f install-linux.sh
 
 systemctl daemon-reload
+systemctl start bindplane
 systemctl enable bindplane
 systemctl restart bindplane
 
@@ -104,6 +105,7 @@ chmod +x install_unix.sh
   -k "install_id=$(uuidgen)"
 
 systemctl daemon-reexec
+systemctl start bindplane-agent
 systemctl enable bindplane-agent
 systemctl restart bindplane-agent
 
