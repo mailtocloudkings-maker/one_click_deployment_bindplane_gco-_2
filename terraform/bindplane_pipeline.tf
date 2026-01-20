@@ -30,7 +30,7 @@ EOT
 ################################
 provider "bindplane" {
   remote_url = "http://${google_compute_instance.bindplane_control.network_interface[0].access_config[0].nat_ip}:3001"
-  api_key    = var.bindplane_api_key
+  # api_key will be read automatically from bindplane.auto.tfvars
 }
 
 ################################
