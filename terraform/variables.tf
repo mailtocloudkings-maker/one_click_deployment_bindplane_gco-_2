@@ -1,15 +1,15 @@
-variable "project_id" {
-  description = "GCP project ID"
-  type        = string
-}
+# ------------------------
+# variables.tf
+# ------------------------
 
 variable "zone" {
-  description = "GCP zone (e.g., us-central1-a)"
+  description = "GCP zone for VM"
   type        = string
+  default     = "us-central1-a"
 }
 
-variable "region" {
-  description = "GCP region (e.g., us-central1)"
+variable "project" {
+  description = "GCP Project ID"
   type        = string
 }
 
@@ -17,5 +17,3 @@ variable "alert_email" {
   description = "Email for alert notifications"
   type        = string
 }
-
-
