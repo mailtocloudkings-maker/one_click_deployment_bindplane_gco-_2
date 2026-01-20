@@ -7,6 +7,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      TF_IN_AUTOMATION: true
+
     steps:
       # 1️⃣ Checkout repository
       - name: Checkout
@@ -31,39 +34,53 @@ jobs:
         working-directory: terraform
         run: terraform init
 
-      # 6️⃣ Step 1: Create VM + BindPlane Agent
-      - name: Terraform Apply VM & Agent
+      # 6️⃣ Step 1: Create VM + Firewall + GCS + GCO base
+      - name: Terraform Apply Core Infrastructure
         working-directory: terraform
         run: |
-          terraform apply -target=google_compute_instance.bindplane_control \
-            -auto-approve \
+          terraform apply -auto-approve \
             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
             -var="region=${{ secrets.GCP_REGION }}" \
             -var="zone=${{ secrets.GCP_ZONE }}" \
             -var="alert_email=${{ secrets.ALERT_EMAIL }}"
 
-      # 7️⃣ Step 2: Generate BindPlane API Key
+      # 7️⃣ Step 2: Generate BindPlane API Key (runtime)
       - name: Generate BindPlane API Key
         working-directory: terraform
         run: |
           SERVER_IP=$(terraform output -raw bindplane_vm_ip)
-          echo "Waiting 30 seconds for BindPlane server to be ready..."
-          sleep 30
+
+          echo "⏳ Waiting 45s for BindPlane server to become ready..."
+          sleep 45
+
           TOKEN=$(curl -s -X POST http://$SERVER_IP:3001/v1/session \
             -H "Content-Type: application/json" \
             -d '{"username":"admin","password":"password*test"}' | jq -r '.token')
+
+          if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+            echo "❌ Failed to authenticate to BindPlane"
+            exit 1
+          fi
+
           API_KEY=$(curl -s -X POST http://$SERVER_IP:3001/v1/api-keys \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"name":"gha-key"}' | jq -r '.key')
-          echo "bindplane_api_key=\"$API_KEY\"" > terraform/bindplane.auto.tfvars
-          echo "✅ BindPlane API key generated and saved to bindplane.auto.tfvars"
+            -d '{"name":"gha-auto-key"}' | jq -r '.key')
 
-      # 8️⃣ Step 3: Apply BindPlane Pipeline + GCS + GCO + Alerts
-      - name: Terraform Apply Pipeline & Destinations
+          if [ "$API_KEY" = "null" ] || [ -z "$API_KEY" ]; then
+            echo "❌ Failed to create BindPlane API key"
+            exit 1
+          fi
+
+          echo "bindplane_api_key=\"$API_KEY\"" > bindplane.auto.tfvars
+          echo "✅ BindPlane API key generated"
+
+      # 8️⃣ Step 3: Apply BindPlane Pipelines (uses generated API key)
+      - name: Terraform Apply BindPlane Pipelines
         working-directory: terraform
         run: |
           terraform apply -auto-approve \
-            -var="project=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="region=${{ secrets.GCP_REGION }}" \
             -var="zone=${{ secrets.GCP_ZONE }}" \
             -var="alert_email=${{ secrets.ALERT_EMAIL }}"
