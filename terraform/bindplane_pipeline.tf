@@ -1,5 +1,5 @@
 ################################
-# Generate API key automatically
+# Auto-generate BindPlane API Key
 ################################
 resource "null_resource" "bindplane_api_key" {
   depends_on = [null_resource.install_bindplane_agent]
@@ -8,15 +8,18 @@ resource "null_resource" "bindplane_api_key" {
     command = <<EOT
 SERVER_IP=$(terraform output -raw bindplane_vm_ip)
 
+# Login to BindPlane UI and get session token
 TOKEN=$(curl -s -X POST http://$SERVER_IP:3001/v1/session \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"password*test"}' | jq -r '.token')
 
+# Create API key
 API_KEY=$(curl -s -X POST http://$SERVER_IP:3001/v1/api-keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"terraform-key"}' | jq -r '.key')
 
+# Save to bindplane.auto.tfvars
 echo "bindplane_api_key=\"$API_KEY\"" > bindplane.auto.tfvars
 EOT
   }
@@ -31,11 +34,29 @@ provider "bindplane" {
 }
 
 ################################
+# Random suffix for unique names
+################################
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
+################################
 # SOURCES
 ################################
+resource "bindplane_source" "host_metrics" {
+  rollout = true
+  name    = "host-metrics-${random_id.suffix.hex}"
+  type    = "host"
+
+  parameters_json = jsonencode([
+    { name = "collection_interval", value = 60 },
+    { name = "enable_process", value = true }
+  ])
+}
+
 resource "bindplane_source" "journald_logs" {
   rollout = true
-  name    = "journald-${random_id.suffix.hex}"
+  name    = "journald-logs-${random_id.suffix.hex}"
   type    = "journald"
 }
 
@@ -46,18 +67,24 @@ resource "bindplane_processor" "batch" {
   rollout = true
   name    = "batch-${random_id.suffix.hex}"
   type    = "batch"
+
+  parameters_json = jsonencode([
+    { name = "send_batch_size", value = 200 },
+    { name = "send_batch_max_size", value = 400 },
+    { name = "timeout", value = "5s" }
+  ])
 }
 
 ################################
-# PIPELINE CONFIGURATION
+# CONFIGURATIONS
 ################################
-resource "bindplane_configuration" "vm_logs_pipeline" {
+resource "bindplane_configuration" "logs_config" {
   rollout  = true
-  name     = "vm-logs-${random_id.suffix.hex}"
+  name     = "agent-vm-logs-${random_id.suffix.hex}"
   platform = "linux"
 
   labels = {
-    environment = "production"
+    environment = "development"
     managed_by  = "terraform"
   }
 
@@ -67,10 +94,26 @@ resource "bindplane_configuration" "vm_logs_pipeline" {
   }
 
   destination {
-    name = "googlecloud"
+    name = "googlebucket" # your GCS bucket destination
+  }
+}
+
+resource "bindplane_configuration" "metrics_config" {
+  rollout  = true
+  name     = "agent-vm-metrics-${random_id.suffix.hex}"
+  platform = "linux"
+
+  labels = {
+    environment = "production"
+    managed_by  = "terraform"
+  }
+
+  source {
+    name       = bindplane_source.host_metrics.name
+    processors = [bindplane_processor.batch.name]
   }
 
   destination {
-    name = "googlebucket"
+    name = "googlebucket" # your GCS bucket destination
   }
 }
