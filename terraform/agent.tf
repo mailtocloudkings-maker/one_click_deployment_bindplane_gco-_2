@@ -3,7 +3,7 @@ resource "null_resource" "install_bindplane_agent" {
     google_compute_instance.bindplane_control
   ]
 
-  # Use the SSH key generated in vm.tf
+  # SSH connection using generated key
   connection {
     type        = "ssh"
     user        = "ubuntu"
