@@ -1,14 +1,3 @@
-# Generate a random suffix for unique names
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# Generate SSH key pair for agent installation
-resource "tls_private_key" "bindplane_ssh" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
 # BindPlane VM
 resource "google_compute_instance" "bindplane_control" {
   name         = "bindplane-control-${random_id.suffix.hex}"
