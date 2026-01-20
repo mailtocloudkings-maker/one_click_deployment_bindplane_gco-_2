@@ -37,7 +37,8 @@ jobs:
         run: |
           terraform apply -target=google_compute_instance.bindplane_control \
             -auto-approve \
-            -var="project=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+            -var="region=${{ secrets.GCP_REGION }}" \
             -var="zone=${{ secrets.GCP_ZONE }}" \
             -var="alert_email=${{ secrets.ALERT_EMAIL }}"
 
