@@ -1,5 +1,5 @@
 ################################
-# SSH KEY (optional, safe to keep)
+# SSH KEY (optional)
 ################################
 resource "tls_private_key" "bindplane_ssh" {
   algorithm = "RSA"
@@ -22,13 +22,11 @@ resource "google_compute_instance" "bindplane_control" {
     }
   }
 
-  # DEFAULT VPC
   network_interface {
     network = "default"
     access_config {}
   }
 
-  # Inject SSH key (optional, not required by pipeline)
   metadata = {
     ssh-keys = "ubuntu:${tls_private_key.bindplane_ssh.public_key_openssh}"
   }
@@ -43,59 +41,76 @@ set -euxo pipefail
 LOG_FILE="/var/log/bindplane-startup.log"
 exec > >(tee -a $LOG_FILE) 2>&1
 
-echo "=== BindPlane startup script started ==="
+echo "=== BindPlane startup started ==="
 
-# -------------------------------
-# OS & dependencies
-# -------------------------------
+################################
+# OS & Dependencies
+################################
 apt-get update -y
-apt-get install -y curl unzip postgresql postgresql-contrib ca-certificates uuid-runtime
+apt-get install -y curl unzip ca-certificates uuid-runtime \
+                   postgresql postgresql-contrib
 
 systemctl enable postgresql
 systemctl start postgresql
 
-# -------------------------------
-# PostgreSQL user (idempotent)
-# -------------------------------
+################################
+# PostgreSQL: USER + DB (IDEMPOTENT)
+################################
 sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'bindplane') THEN
-    CREATE ROLE bindplane LOGIN PASSWORD 'bindplane123';
+  -- Create user
+  IF NOT EXISTS (
+    SELECT FROM pg_roles WHERE rolname = 'bindplane_user'
+  ) THEN
+    CREATE USER bindplane_user WITH PASSWORD 'StrongPassword@2025';
+  END IF;
+
+  -- Create database
+  IF NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'bindplane'
+  ) THEN
+    CREATE DATABASE bindplane OWNER bindplane_user;
   END IF;
 END
 $$;
 SQL
 
-# -------------------------------
-# PostgreSQL DB (idempotent)
-# -------------------------------
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'bindplane'" | grep -q 1 || \
-  sudo -u postgres createdb -O bindplane bindplane
+################################
+# PostgreSQL: GRANTS
+################################
+sudo -u postgres psql <<'SQL'
+GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane_user;
+SQL
 
-# -------------------------------
+################################
+# PostgreSQL: SCHEMA PERMISSIONS
+################################
+sudo -u postgres psql -d bindplane <<'SQL'
+GRANT USAGE, CREATE ON SCHEMA public TO bindplane_user;
+ALTER SCHEMA public OWNER TO bindplane_user;
+SQL
+
+################################
 # Install BindPlane Server
-# -------------------------------
+################################
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install-linux.sh
 bash install-linux.sh --init
 rm -f install-linux.sh
 
 systemctl daemon-reload
-systemctl start bindplane
 systemctl enable bindplane
 systemctl restart bindplane
 
-# -------------------------------
+################################
 # Wait for BindPlane API
-# -------------------------------
-echo "Waiting for BindPlane server..."
+################################
+echo "Waiting for BindPlane API..."
 sleep 30
 
-# -------------------------------
-# Install BindPlane Agent
-# -------------------------------
-echo "Installing BindPlane Agent..."
-
+################################
+# Install BindPlane Agent (LOCAL)
+################################
 curl -fsSL https://bdot.bindplane.com/v1.89.0/install_unix.sh -o install_unix.sh
 chmod +x install_unix.sh
 
@@ -105,10 +120,9 @@ chmod +x install_unix.sh
   -k "install_id=$(uuidgen)"
 
 systemctl daemon-reexec
-systemctl start bindplane-agent
 systemctl enable bindplane-agent
 systemctl restart bindplane-agent
 
-echo "=== BindPlane startup script completed ==="
+echo "=== BindPlane startup completed ==="
 SCRIPT
 }
