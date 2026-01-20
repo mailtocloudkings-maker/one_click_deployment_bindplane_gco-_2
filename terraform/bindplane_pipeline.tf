@@ -19,7 +19,7 @@ API_KEY=$(curl -s -X POST http://$SERVER_IP:3001/v1/api-keys \
   -H "Content-Type: application/json" \
   -d '{"name":"terraform-key"}' | jq -r '.key')
 
-# Save to bindplane.auto.tfvars
+# Save to bindplane.auto.tfvars for Terraform provider
 echo "bindplane_api_key=\"$API_KEY\"" > bindplane.auto.tfvars
 EOT
   }
@@ -87,7 +87,7 @@ resource "bindplane_configuration" "logs_config" {
   }
 
   destination {
-    name = "googlebucket" # your GCS bucket destination
+    name = "googlebucket" # GCS bucket destination
   }
 }
 
@@ -107,6 +107,6 @@ resource "bindplane_configuration" "metrics_config" {
   }
 
   destination {
-    name = "googlebucket" # your GCS bucket destination
+    name = "googlebucket" # GCS bucket destination
   }
 }
