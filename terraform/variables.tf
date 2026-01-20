@@ -1,16 +1,19 @@
-variable "project_id" {}
+variable "project_id" {
+  description = "GCP project ID"
+  type        = string
+}
+
 variable "zone" {
-  description = "GCP zone"
+  description = "GCP zone (e.g., us-central1-a)"
   type        = string
 }
 
 variable "region" {
-  description = "GCP region"
+  description = "GCP region (e.g., us-central1)"
   type        = string
 }
 
-variable "alert_email" {}
-
-variable "bindplane_api_key" {
-  default = ""
+variable "alert_email" {
+  description = "Email for alert notifications"
+  type        = string
 }
