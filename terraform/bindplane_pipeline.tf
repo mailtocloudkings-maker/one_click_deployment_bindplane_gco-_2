@@ -34,13 +34,6 @@ provider "bindplane" {
 }
 
 ################################
-# Random suffix for unique names
-################################
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-################################
 # SOURCES
 ################################
 resource "bindplane_source" "host_metrics" {
