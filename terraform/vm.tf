@@ -39,7 +39,7 @@ sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='bindplane') THEN
-    CREATE USER bindplane WITH PASSWORD 'bindplane123';
+    CREATE USER bindplane WITH PASSWORD 'StrongPassword@2025';
   END IF;
 END $$;
 
@@ -121,7 +121,7 @@ store:
     statementTimeout: 1m0s
     database: bindplane
     sslmode: disable
-    username: bindplane_user
+    username: bindplane
     password: StrongPassword@2025
     maxConnections: 100
     maxLifetime: 6h0m0s
