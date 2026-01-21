@@ -18,6 +18,7 @@ resource "google_compute_instance" "bindplane_control" {
 
   metadata_startup_script = <<-SCRIPT
 #!/bin/bash
+set -e
 LOG=/var/log/bindplane-startup.log
 exec > >(tee -a $LOG) 2>&1
 
@@ -52,30 +53,36 @@ END $$;
 SQL
 
 ############################
-# INSTALL BINDPLANE (NON-INTERACTIVE)
+# INSTALL BINDPLANE (NO INIT)
 ############################
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
 chmod +x /tmp/install-bindplane.sh
 
-# NON-INTERACTIVE INSTALL
-yes | /tmp/install-bindplane.sh --init || true
+# ✅ SAFE NON-INTERACTIVE INSTALL
+/tmp/install-bindplane.sh
 
 ############################
-# WAIT FOR FILES
+# CONFIGURATION
 ############################
-sleep 10
 mkdir -p /etc/bindplane
 
-############################
-# FORCE CONFIG (DELETE + REPLACE)
-############################
 cat <<'EOF' > /etc/bindplane/config.yaml
 apiVersion: bindplane.observiq.com/v1
+
+eula:
+  accepted: "2023-05-30"
+
+license: "H4sIAAAAAAAA/1RVCXPayBL+K7HyUolfYb8Z3aLqVdbG5oqFY2wjwLPHXLKEERAOI0iyv32rWwzepJKJmKOPr7/++ruVK6tuSUI5dU"
+
 env: production
+
+mode:
+  - all
 
 network:
   host: 0.0.0.0
   port: "3001"
+  tlsMinVersion: "1.3"
 
 auth:
   type: system
@@ -104,10 +111,10 @@ chmod 600 /etc/bindplane/config.yaml
 ############################
 systemctl daemon-reload
 systemctl enable bindplane
-systemctl restart bindplane
+systemctl start bindplane
 
-sleep 5
-systemctl status bindplane --no-pager || true
+sleep 10
+systemctl status bindplane --no-pager
 
 echo "=== STARTUP SCRIPT END ==="
 SCRIPT
