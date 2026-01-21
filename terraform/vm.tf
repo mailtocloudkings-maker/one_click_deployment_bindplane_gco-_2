@@ -102,7 +102,7 @@ auth:
 network:
   host: 0.0.0.0
   port: "3001"
-  tlsMinVersion: "1.3"
+    tlsMinVersion: "1.3"
 agentVersions:
   syncInterval: 1h0m0s
   agentUpgradesFolder: /var/lib/bindplane/agent-upgrades
@@ -121,8 +121,8 @@ store:
     statementTimeout: 1m0s
     database: bindplane
     sslmode: disable
-    username: bindplane
-    password: bindplane123
+    username: bindplane_user
+    password: StrongPassword@2025
     maxConnections: 100
     maxLifetime: 6h0m0s
     schema: public
