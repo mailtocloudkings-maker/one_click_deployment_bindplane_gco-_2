@@ -71,7 +71,6 @@ systemctl start bindplane
 mkdir -p /etc/bindplane
 
 cat <<'EOF' > /etc/bindplane/config.yaml
-
 apiVersion: bindplane.observiq.com/v1
 
 eula:
@@ -99,19 +98,18 @@ agents:
       headers:
         - X-Bindplane-Authorization
         - Authorization
-
   heartbeatInterval: 30s
   heartbeatTTL: 1m0s
   heartbeatExpiryInterval: 30s
   rebalanceInterval: 1h0m0s
   maxSimultaneousConnections: 10
-admin:
-    auth:
-      type: system
-      username: admin
-      password: test
-      sessionSecret: d5a08be4-966b-47a3-9974-93061b84061c
 
+admin:
+  auth:
+    type: system
+    username: admin
+    password: test
+    sessionSecret: d5a08be4-966b-47a3-9974-93061b84061c
   ldap:
     protocol: ldap
 
@@ -125,10 +123,8 @@ store:
   type: postgres
   maxEvents: 100
   eventMergeWindow: 100ms
-
   bbolt:
     path: /var/lib/bindplane/storage/bindplane.db
-
   postgres:
     host: localhost
     port: "5432"
@@ -141,7 +137,6 @@ store:
     maxConnections: 100
     maxLifetime: 6h0m0s
     schema: public
-
   encryptionProvider:
     cache:
       capacity: 2000
@@ -149,18 +144,15 @@ store:
 
 eventBus:
   type: local
-
   googlePubSub:
     retry:
       maxRetries: 5
-
   kafka:
     topic: bindplane-op-message-bus
     authType: none
     plainText: {}
     sasl:
       mechanism: plain
-
   nats:
     server:
       client:
@@ -176,10 +168,8 @@ eventBus:
     client:
       endpoint: nats://localhost:4222
       subject: bindplane-event-bus
-
   azure:
     cloud: public
-
   health:
     requiredHosts: 1
     interval: 15s
@@ -237,13 +227,10 @@ advanced:
     stats:
       batchFlushInterval: 1s
       workerCount: 1
-
   server:
     maxRequestBytes: 10485760
-
   agent:
     telemetryPort: 8888
-
   rollout:
     retry:
       interval: 30s
@@ -267,6 +254,7 @@ quotas:
   projects:
     default:
       maxAgents: 1000
+
 EOF
 
 ############################
