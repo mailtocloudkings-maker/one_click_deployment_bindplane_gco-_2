@@ -74,10 +74,10 @@ cat <<'EOF' > /etc/bindplane/config.yaml
 apiVersion: bindplane.observiq.com/v1
 eula:
   accepted: "2023-05-30"
-license: "H4sIAAAAAAAA/1RVCXPayBL+K7HyUolfYb8Z3aLqVdbG5oqFY2wjwLPHXLKEERAOI0iyv32rWwzepJKJmKOPr7/++ruVK6tuSUI5dU"
+license: H4sIAAAAAAAA/1RVCXPayBL+K7HyUolfYb8Z3aLqVdbG5oqFY2wjwLPHXLKEERAOI0iyv32rWwzepJKJmKOPr7/++ruVK6tuSUI5dU>
 env: production
 mode:
-  - all
+- all
 output: table
 rolloutsInterval: 5s
 agents:
@@ -85,8 +85,8 @@ agents:
     type: secretKey
     secretKey:
       headers:
-        - X-Bindplane-Authorization
-        - Authorization
+      - X-Bindplane-Authorization
+      - Authorization
   heartbeatInterval: 30s
   heartbeatTTL: 1m0s
   heartbeatExpiryInterval: 30s
@@ -102,12 +102,12 @@ auth:
 network:
   host: 0.0.0.0
   port: "3001"
-  tlsMinVersion: "1.3"
+    tlsMinVersion: "1.3"
 agentVersions:
   syncInterval: 1h0m0s
   agentUpgradesFolder: /var/lib/bindplane/agent-upgrades
   clients:
-    - bdot
+  - bdot
 store:
   type: postgres
   maxEvents: 100
@@ -121,8 +121,8 @@ store:
     statementTimeout: 1m0s
     database: bindplane
     sslmode: disable
-    username: bindplane_user
-    password: "StrongPassword@2025"
+    username: bindplane
+    password: bindplane123
     maxConnections: 100
     maxLifetime: 6h0m0s
     schema: public
@@ -197,9 +197,9 @@ prometheus:
   auth:
     type: basic
     username: prometheus
-    password: "qvAWI0nIJQ+JTKn/hM/zNmoxBY5KKOW9"
+    password: qvAWI0nIJQ+JTKn/hM/zNmoxBY5KKOW9
 analytics:
-  segmentWriteKey: "36hUTo2RZxoaodC3w4TcIFxph9VAFYxB"
+  segmentWriteKey: 36hUTo2RZxoaodC3w4TcIFxph9VAFYxB
 advanced:
   store:
     stats:
@@ -210,9 +210,9 @@ advanced:
   agent:
     telemetryPort: 8888
   rollout:
-    retry:
+  retry:
       interval: 30s
-      updateWorkerCount: 10
+    updateWorkerCount: 10
 features:
   type: default
   posthog:
