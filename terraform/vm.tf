@@ -64,8 +64,9 @@ SQL
 
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install-linux.sh
 chmod +x install-linux.sh
-bash install-linux.sh --init
+bash install-linux.sh --skip-init
 rm -f install-linux.sh
+
 
 ############################
 # CONFIG FILE
