@@ -1,50 +1,50 @@
+#!/usr/bin/env python3
 import subprocess
-import textwrap
-import os
+import time
+from pathlib import Path
 
 def run(cmd):
+    print(f"▶ {cmd}")
     subprocess.run(cmd, shell=True, check=True)
 
-# PostgreSQL setup
+print("=== SETUP START ===")
+
+# PostgreSQL
+run("systemctl enable postgresql")
+run("systemctl start postgresql")
+
 run("""sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'bindplane_user') THEN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='bindplane_user') THEN
     CREATE USER bindplane_user WITH PASSWORD 'StrongPassword@2025';
   END IF;
-END
-$$;
+END$$;
 SQL""")
 
 run("""sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'bindplane') THEN
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname='bindplane') THEN
     CREATE DATABASE bindplane OWNER bindplane_user;
   END IF;
-END
-$$;
-SQL""")
-
-run("""sudo -u postgres psql <<'SQL'
-GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane_user;
-\\c bindplane
-GRANT USAGE, CREATE ON SCHEMA public TO bindplane_user;
-ALTER SCHEMA public OWNER TO bindplane_user;
+END$$;
 SQL""")
 
 # Install BindPlane
-run("""
-curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
-chmod +x /tmp/install-bindplane.sh
-/tmp/install-bindplane.sh --init
-""")
+run("curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install.sh")
+run("bash install.sh --init")
+run("rm -f install.sh")
 
-# Write config.yaml (NO PROMPTS)
-config = textwrap.dedent("""\
+# Stop service before config
+run("systemctl stop bindplane")
+
+# Write config
+config = Path("/etc/bindplane/config.yaml")
+config.parent.mkdir(parents=True, exist_ok=True)
+
+config.write_text("""
 apiVersion: bindplane.observiq.com/v1
-eula:
-  accepted: "2023-05-30"
 env: production
 network:
   host: 0.0.0.0
@@ -64,13 +64,12 @@ store:
     sslmode: disable
 """)
 
-os.makedirs("/etc/bindplane", exist_ok=True)
-with open("/etc/bindplane/config.yaml", "w") as f:
-    f.write(config)
-
-run("chown -R bindplane:bindplane /etc/bindplane")
+run("chown bindplane:bindplane /etc/bindplane/config.yaml")
 run("chmod 600 /etc/bindplane/config.yaml")
 
+# Start service
 run("systemctl daemon-reload")
 run("systemctl enable bindplane")
 run("systemctl restart bindplane")
+
+print("=== SETUP COMPLETE ===")
