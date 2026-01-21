@@ -57,14 +57,15 @@ SQL
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
 chmod +x /tmp/install-bindplane.sh
 
-# NON-INTERACTIVE INSTALL
+# NON-INTERACTIVE INSTALL FIRST
 yes | /tmp/install-bindplane.sh --init || true
 
 ############################
-# WAIT FOR FILES
+# WAIT FOR FILES & CREATE CONFIG DIR
 ############################
 sleep 10
 mkdir -p /etc/bindplane
+chown -R bindplane:bindplane /etc/bindplane
 
 ############################
 # FORCE CONFIG (DELETE + REPLACE)
@@ -120,8 +121,8 @@ store:
     statementTimeout: 1m0s
     database: bindplane
     sslmode: disable
-    username: bindplane_user
-    password: StrongPassword@2025
+    username: bindplane
+    password: bindplane123
     maxConnections: 100
     maxLifetime: 6h0m0s
     schema: public
