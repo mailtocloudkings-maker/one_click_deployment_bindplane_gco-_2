@@ -1,23 +1,4 @@
-# BindPlane VM with fully automated config
-resource "google_compute_instance" "bindplane_control" {
-  name         = "bindplane-control-${random_id.suffix.hex}"
-  machine_type = "e2-medium"
-  zone         = var.zone
-  tags         = ["bindplane"]
-
-  boot_disk {
-    initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
-      size  = 50
-    }
-  }
-
-  network_interface {
-    network = "default"
-    access_config {}
-  }
-
-  metadata_startup_script = <<-SCRIPT
+metadata_startup_script = <<-SCRIPT
 #!/bin/bash
 set -euxo pipefail
 
@@ -27,18 +8,36 @@ exec > >(tee -a $LOG_FILE) 2>&1
 echo "=== BindPlane startup script started ==="
 
 # -------------------------------
-# OS & dependencies
+# Base packages
 # -------------------------------
 apt-get update -y
-apt-get install -y curl unzip postgresql postgresql-contrib ca-certificates uuid-runtime
+apt-get install -y \
+  python3 \
+  python3-pip \
+  curl \
+  unzip \
+  postgresql \
+  postgresql-contrib \
+  ca-certificates \
+  uuid-runtime
 
 systemctl enable postgresql
 systemctl start postgresql
 
 # -------------------------------
-# PostgreSQL user & database
+# Write Python installer
 # -------------------------------
-sudo -u postgres psql <<'SQL'
+cat >/root/setup_bindplane.py <<'PYTHON'
+import subprocess
+import textwrap
+import os
+
+def run(cmd):
+    subprocess.run(cmd, shell=True, check=True)
+
+print("Creating PostgreSQL user and database")
+
+run("""sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'bindplane_user') THEN
@@ -46,7 +45,9 @@ BEGIN
   END IF;
 END
 $$;
+SQL""")
 
+run("""sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'bindplane') THEN
@@ -54,46 +55,44 @@ BEGIN
   END IF;
 END
 $$;
+SQL""")
 
-sudo -u postgres psql <<'SQL'
+run("""sudo -u postgres psql <<'SQL'
 GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane_user;
-\c bindplane
+\\c bindplane
 GRANT USAGE, CREATE ON SCHEMA public TO bindplane_user;
 ALTER SCHEMA public OWNER TO bindplane_user;
-SQL
+SQL""")
 
-# -------------------------------
-# Install BindPlane Server (non-interactive)
-# -------------------------------
-curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install-linux.sh
-chmod +x install-linux.sh
-bash install-linux.sh --init
-rm -f install-linux.sh
+print("Installing BindPlane")
 
-# -------------------------------
-# Write fully configured config.yaml (pre-populate all prompts)
-# -------------------------------
-sudo mkdir -p /etc/bindplane
-sudo tee /etc/bindplane/config.yaml > /dev/null <<'EOF'
+run("""
+curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-linux.sh
+chmod +x /tmp/install-linux.sh
+/tmp/install-linux.sh --init
+""")
+
+print("Writing /etc/bindplane/config.yaml")
+
+config_yaml = textwrap.dedent("""\
 apiVersion: bindplane.observiq.com/v1
 eula:
   accepted: "2023-05-30"
-license: H4sIAAAAAAAA/1RVCXPayBL+K7HyUolfYb8Z3aLqVdbG5oqFY2wjwLPHXLKEERAOI0iyv32rWwzepJKJmKOPr7/++ruVK6tuSUI5dU>
 env: production
 mode:
 - all
 output: table
+
 network:
-  host: 0.0.0.0          # IP to listen on (skip prompt)
-  port: "3001"           # Port (skip prompt)
-agentVersions:
-  clients:
-  - bdot
+  host: 0.0.0.0
+  port: "3001"
+
 auth:
   type: system
-  username: admin        # pre-set username
-  password: test         # pre-set password
+  username: admin
+  password: test
   sessionSecret: d5a08be4-966b-47a3-9974-93061b84061c
+
 store:
   type: postgres
   postgres:
@@ -106,21 +105,28 @@ store:
     maxConnections: 100
     maxLifetime: 6h0m0s
     schema: public
-EOF
+""")
+
+os.makedirs("/etc/bindplane", exist_ok=True)
+with open("/etc/bindplane/config.yaml", "w") as f:
+    f.write(config_yaml)
+
+run("chown -R bindplane:bindplane /etc/bindplane")
+run("chmod 600 /etc/bindplane/config.yaml")
+
+print("Starting BindPlane service")
+
+run("systemctl daemon-reload")
+run("systemctl enable bindplane")
+run("systemctl restart bindplane")
+
+print("BindPlane setup complete")
+PYTHON
 
 # -------------------------------
-# Fix permissions
+# Run Python installer
 # -------------------------------
-sudo chown -R bindplane:bindplane /etc/bindplane
-sudo chmod 600 /etc/bindplane/config.yaml
-
-# -------------------------------
-# Start BindPlane service
-# -------------------------------
-systemctl daemon-reload
-systemctl enable bindplane
-systemctl restart bindplane
+python3 /root/setup_bindplane.py
 
 echo "=== BindPlane startup script completed ==="
 SCRIPT
-}
