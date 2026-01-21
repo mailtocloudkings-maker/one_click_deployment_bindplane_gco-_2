@@ -62,11 +62,10 @@ GRANT USAGE, CREATE ON SCHEMA public TO bindplane;
 ALTER SCHEMA public OWNER TO bindplane;
 SQL
 
-curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
-chmod +x /tmp/install-bindplane.sh
-
-# Install binaries ONLY (no prompts)
-bash /tmp/install-bindplane.sh --skip-init
+curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install-linux.sh
+chmod +x install-linux.sh
+bash install-linux.sh --init
+rm -f install-linux.sh
 
 ############################
 # CONFIG FILE
