@@ -17,73 +17,60 @@ resource "google_compute_instance" "bindplane_control" {
   }
 
   metadata_startup_script = <<-SCRIPT
-    #!/bin/bash
-    set -euxo pipefail
+#!/bin/bash
+LOG=/var/log/bindplane-startup.log
+exec > >(tee -a $LOG) 2>&1
 
-    LOG_FILE="/var/log/bindplane-startup.log"
-    exec > >(tee -a $LOG_FILE) 2>&1
+echo "=== STARTUP SCRIPT BEGIN ==="
 
-    echo "===== BindPlane startup BEGIN ====="
+############################
+# OS PACKAGES
+############################
+apt-get update -y
+apt-get install -y curl postgresql postgresql-contrib
 
-    # --------------------------------------------------
-    # OS & dependencies
-    # --------------------------------------------------
-    apt-get update -y
-    apt-get install -y \
-      curl \
-      unzip \
-      python3 \
-      postgresql \
-      postgresql-contrib \
-      ca-certificates
+systemctl enable postgresql
+systemctl start postgresql
 
-    systemctl enable postgresql
-    systemctl start postgresql
+############################
+# POSTGRES SETUP
+############################
+sudo -u postgres psql <<'SQL'
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='bindplane') THEN
+    CREATE USER bindplane WITH PASSWORD 'bindplane123';
+  END IF;
+END $$;
 
-    # --------------------------------------------------
-    # PostgreSQL: user + database
-    # --------------------------------------------------
-    sudo -u postgres psql <<'SQL'
-    DO $$
-    BEGIN
-      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'bindplane') THEN
-        CREATE ROLE bindplane LOGIN PASSWORD 'bindplane123';
-      END IF;
-    END
-    $$;
-    SQL
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname='bindplane') THEN
+    CREATE DATABASE bindplane OWNER bindplane;
+  END IF;
+END $$;
+SQL
 
-    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='bindplane'" | grep -q 1 || \
-      sudo -u postgres createdb -O bindplane bindplane
+############################
+# INSTALL BINDPLANE (NON-INTERACTIVE)
+############################
+curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
+chmod +x /tmp/install-bindplane.sh
 
-    sudo -u postgres psql <<'SQL'
-    GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane;
-    \\c bindplane
-    GRANT USAGE, CREATE ON SCHEMA public TO bindplane;
-    ALTER SCHEMA public OWNER TO bindplane;
-    SQL
+# NON-INTERACTIVE INSTALL
+yes | /tmp/install-bindplane.sh --init || true
 
-    # --------------------------------------------------
-    # Install BindPlane Server
-    # --------------------------------------------------
-    curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
-    bash /tmp/install-bindplane.sh --init
-    rm -f /tmp/install-bindplane.sh
+############################
+# WAIT FOR FILES
+############################
+sleep 10
+mkdir -p /etc/bindplane
 
-    # --------------------------------------------------
-    # Stop BindPlane before config overwrite
-    # --------------------------------------------------
-    systemctl stop bindplane || true
-
-    # --------------------------------------------------
-    # INLINE Python: wipe & replace config.yaml
-    # --------------------------------------------------
-    python3 - <<'PYEOF'
-from pathlib import Path
-
-config_path = Path("/etc/bindplane/config.yaml")
-
-config_content = """apiVersion: bindplane.observiq.com/v1
+############################
+# FORCE CONFIG (DELETE + REPLACE)
+############################
+cat <<'EOF' > /etc/bindplane/config.yaml
+apiVersion: bindplane.observiq.com/v1
 env: production
 
 network:
@@ -104,27 +91,24 @@ store:
     username: bindplane
     password: bindplane123
     sslmode: disable
-"""
+EOF
 
-config_path.parent.mkdir(parents=True, exist_ok=True)
-config_path.write_text(config_content)
+############################
+# PERMISSIONS
+############################
+chown -R bindplane:bindplane /etc/bindplane
+chmod 600 /etc/bindplane/config.yaml
 
-print("BindPlane config.yaml overwritten successfully")
-PYEOF
+############################
+# START SERVICE
+############################
+systemctl daemon-reload
+systemctl enable bindplane
+systemctl restart bindplane
 
-    # --------------------------------------------------
-    # Permissions
-    # --------------------------------------------------
-    chown bindplane:bindplane /etc/bindplane/config.yaml
-    chmod 600 /etc/bindplane/config.yaml
+sleep 5
+systemctl status bindplane --no-pager || true
 
-    # --------------------------------------------------
-    # Start BindPlane
-    # --------------------------------------------------
-    systemctl daemon-reload
-    systemctl enable bindplane
-    systemctl restart bindplane
-
-    echo "===== BindPlane startup COMPLETE ====="
-  SCRIPT
+echo "=== STARTUP SCRIPT END ==="
+SCRIPT
 }
