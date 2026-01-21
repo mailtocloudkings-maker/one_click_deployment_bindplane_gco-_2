@@ -86,10 +86,12 @@ mode:
 
 output: table
 rolloutsInterval: 5s
+
 network:
-    host: 0.0.0.0
-    port: "3001"
-    tlsMinVersion: "1.3"
+  host: 0.0.0.0
+  port: "3001"
+  tlsMinVersion: "1.3"
+
 agents:
   auth:
     type: secretKey
@@ -103,13 +105,7 @@ agents:
   heartbeatExpiryInterval: 30s
   rebalanceInterval: 1h0m0s
   maxSimultaneousConnections: 10
-
-  network:
-    host: 0.0.0.0
-    port: "3001"
-    tlsMinVersion: "1.3"
-
-  admin:
+admin:
     auth:
       type: system
       username: admin
@@ -271,7 +267,6 @@ quotas:
   projects:
     default:
       maxAgents: 1000
-
 EOF
 
 ############################
