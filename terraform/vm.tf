@@ -16,38 +16,32 @@ resource "google_compute_instance" "bindplane_control" {
     access_config {}
   }
 
-  ################################
-  # Startup Script
-  ################################
+  # ENABLE SERIAL CONSOLE LOGGING
+  metadata = {
+    serial-port-enable = "true"
+  }
+
+  # CALL PYTHON SCRIPT
   metadata_startup_script = <<-SCRIPT
 #!/bin/bash
 set -euxo pipefail
 
-LOG_FILE="/var/log/bindplane-startup.log"
-exec > >(tee -a $LOG_FILE) 2>&1
+LOG=/var/log/bindplane-startup.log
+exec > >(tee -a $LOG | logger -t bindplane-startup) 2>&1
 
-echo "=== BindPlane startup started ==="
+echo "==== STARTUP SCRIPT BEGIN ===="
 
 apt-get update -y
-apt-get install -y \
-  python3 \
-  curl \
-  unzip \
-  postgresql \
-  postgresql-contrib \
-  ca-certificates \
-  uuid-runtime
+apt-get install -y python3 python3-pip curl ca-certificates postgresql uuid-runtime
 
-systemctl enable postgresql
-systemctl start postgresql
+# Copy python script
+cat <<'PYEOF' > /root/setup_bindplane.py
+$(cat terraform/scripts/setup_bindplane.py)
+PYEOF
 
-mkdir -p /opt/bindplane
-cat >/opt/bindplane/setup_bindplane.py <<'PYTHON'
-$(sed 's/^/    /' terraform/scripts/setup_bindplane.py 2>/dev/null || true)
-PYTHON
+chmod +x /root/setup_bindplane.py
+python3 /root/setup_bindplane.py
 
-python3 /opt/bindplane/setup_bindplane.py
-
-echo "=== BindPlane startup completed ==="
+echo "==== STARTUP SCRIPT END ===="
 SCRIPT
 }
