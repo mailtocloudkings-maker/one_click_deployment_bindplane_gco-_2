@@ -1,5 +1,5 @@
 resource "google_compute_instance" "bindplane_control" {
-  name         = "bindplane-control"
+  name         = "bindplane-control-${random_id.suffix.hex}"
   machine_type = "e2-standard-4"
   zone         = var.zone
   tags         = ["bindplane"]
@@ -86,7 +86,10 @@ mode:
 
 output: table
 rolloutsInterval: 5s
-
+network:
+    host: 0.0.0.0
+    port: "3001"
+    tlsMinVersion: "1.3"
 agents:
   auth:
     type: secretKey
