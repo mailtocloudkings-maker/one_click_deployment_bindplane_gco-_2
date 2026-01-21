@@ -12,7 +12,7 @@ resource "google_compute_instance" "bindplane_control" {
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.bindplane_subnet.name
+    network = "default"
     access_config {}
   }
 
