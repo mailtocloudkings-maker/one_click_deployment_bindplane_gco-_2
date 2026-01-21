@@ -16,10 +16,10 @@ resource "google_compute_instance" "bindplane_control" {
     access_config {}
   }
 
-  metadata_startup_script = &lt;&lt;-SCRIPT
+  metadata_startup_script = <<-SCRIPT
 #!/bin/bash
 LOG=/var/log/bindplane-startup.log
-exec &gt; &gt;(tee -a $LOG) 2&gt;&amp;1
+exec > >(tee -a $LOG) 2>&1
 
 echo "=== STARTUP SCRIPT BEGIN ==="
 
@@ -35,7 +35,7 @@ systemctl start postgresql
 ############################
 # POSTGRES SETUP
 ############################
-sudo -u postgres psql &lt;&lt;'SQL'
+sudo -u postgres psql <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='bindplane') THEN
@@ -69,7 +69,7 @@ mkdir -p /etc/bindplane
 ############################
 # FORCE CONFIG (DELETE + REPLACE)
 ############################
-cat &lt;&lt;'EOF' &gt; /etc/bindplane/config.yaml
+cat <<'EOF' > /etc/bindplane/config.yaml
 apiVersion: bindplane.observiq.com/v1
 env: production
 
