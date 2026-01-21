@@ -36,30 +36,23 @@ systemctl start postgresql
 ############################
 # POSTGRES SETUP
 ############################
-sudo -u postgres psql <<'SQL'
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'bindplane') THEN
-    CREATE DATABASE bindplane;
-  END IF;
-END $$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'bindplane') THEN
-    CREATE USER bindplane WITH PASSWORD 'StrongPassword@2025';
-  END IF;
-END $$;
+# Create database if it does not exist
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'bindplane'" | grep -q 1 || \
+sudo -u postgres psql -c "CREATE DATABASE bindplane;"
 
-ALTER DATABASE bindplane OWNER TO bindplane;
+# Create user if it does not exist
+sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'bindplane'" | grep -q 1 || \
+sudo -u postgres psql -c "CREATE USER bindplane WITH PASSWORD 'StrongPassword@2025';"
 
-GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane;
+# Ownership and privileges
+sudo -u postgres psql -c "ALTER DATABASE bindplane OWNER TO bindplane;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE bindplane TO bindplane;"
 
-\c bindplane
+# Schema permissions
+sudo -u postgres psql -d bindplane -c "GRANT USAGE, CREATE ON SCHEMA public TO bindplane;"
+sudo -u postgres psql -d bindplane -c "ALTER SCHEMA public OWNER TO bindplane;"
 
-GRANT USAGE, CREATE ON SCHEMA public TO bindplane;
-ALTER SCHEMA public OWNER TO bindplane;
-SQL
 
 
 ############################
