@@ -63,11 +63,13 @@ ALTER SCHEMA public OWNER TO bindplane;
 SQL
 
 ############################
-# INSTALL BINDPLANE (FIXED)
+# INSTALL BINDPLANE (NON-INTERACTIVE)
 ############################
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o install-linux.sh
 chmod +x install-linux.sh
-BINDPLANE_SKIP_INIT=1 bash install-linux.sh
+
+# Skip interactive prompts; configuration will be from config.yaml
+bash install-linux.sh --skip-init
 rm -f install-linux.sh
 
 ############################
@@ -77,7 +79,6 @@ mkdir -p /etc/bindplane
 
 cat <<'EOF' > /etc/bindplane/config.yaml
 apiVersion: bindplane.observiq.com/v1
-
 eula:
   accepted: "2023-05-30"
 
