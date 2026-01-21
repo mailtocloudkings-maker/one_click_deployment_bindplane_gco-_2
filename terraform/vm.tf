@@ -57,7 +57,7 @@ SQL
 curl -fsSL https://storage.googleapis.com/bindplane-op-releases/bindplane/latest/install-linux.sh -o /tmp/install-bindplane.sh
 chmod +x /tmp/install-bindplane.sh
 
-# NON-INTERACTIVE INSTALL
+# NON-INTERACTIVE INSTALL FIRST
 yes | /tmp/install-bindplane.sh --init || true
 
 ############################
