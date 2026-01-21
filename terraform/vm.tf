@@ -102,7 +102,7 @@ auth:
 network:
   host: 0.0.0.0
   port: "3001"
-    tlsMinVersion: "1.3"
+  tlsMinVersion: "1.3"
 agentVersions:
   syncInterval: 1h0m0s
   agentUpgradesFolder: /var/lib/bindplane/agent-upgrades
